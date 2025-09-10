@@ -42,6 +42,10 @@ class DeleteStatement:
     table_name: str
     where_clause: Optional[Dict[str, Any]] = None
 
+@dataclass
+class DescribeStatement:
+    table_name: str
+
 class SQLParser:
     """SQL Parser implementing the Swapna (Dreaming) principle"""
     
@@ -49,10 +53,11 @@ class SQLParser:
         self.keywords = {
             'CREATE', 'TABLE', 'INSERT', 'INTO', 'VALUES', 'SELECT', 
             'FROM', 'WHERE', 'DELETE', 'ORDER', 'BY', 'LIMIT',
+            'DESCRIBE', 'DESC',  # Add DESCRIBE commands
             'INTEGER', 'TEXT', 'REAL', 'BLOB', 'NULL'
         }
     
-    def parse(self, sql: str) -> Union[CreateTableStatement, InsertStatement, SelectStatement, DeleteStatement]:
+    def parse(self, sql: str) -> Union[CreateTableStatement, InsertStatement, SelectStatement, DeleteStatement, DescribeStatement]:
         """Parse SQL statement into AST"""
         sql = sql.strip().rstrip(';')
         tokens = self._tokenize(sql)
@@ -70,6 +75,8 @@ class SQLParser:
             return self._parse_select(tokens)
         elif statement_type == 'DELETE':
             return self._parse_delete(tokens)
+        elif statement_type in ['DESCRIBE', 'DESC']:
+            return self._parse_describe(tokens)
         else:
             raise ParseError(f"Unsupported statement type: {statement_type}")
     
@@ -256,3 +263,11 @@ class SQLParser:
             where_clause = {'column': col, 'operator': op, 'value': val}
         
         return DeleteStatement(table_name, where_clause)
+    
+    def _parse_describe(self, tokens: List[str]) -> DescribeStatement:
+        """Parse DESCRIBE or DESC statement"""
+        if len(tokens) < 2:
+            raise ParseError("Invalid DESCRIBE syntax - missing table name")
+        
+        table_name = tokens[1]
+        return DescribeStatement(table_name)

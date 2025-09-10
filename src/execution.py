@@ -5,7 +5,7 @@ The final execution layer that coordinates all other components
 
 import hashlib
 from typing import List, Dict, Any, Optional, Union, Tuple
-from .parser import SQLParser, CreateTableStatement, InsertStatement, SelectStatement, DeleteStatement
+from .parser import SQLParser, CreateTableStatement, InsertStatement, SelectStatement, DeleteStatement, DescribeStatement
 from .storage import StorageEngine
 from .cache import MemoryCache, MemoryEngine
 from .exceptions import ExecutionError, ParseError, StorageError
@@ -61,6 +61,8 @@ class ExecutionEngine:
                 return self._execute_select(statement, sql)
             elif isinstance(statement, DeleteStatement):
                 return self._execute_delete(statement)
+            elif isinstance(statement, DescribeStatement):
+                return self._execute_describe(statement)
             else:
                 raise ExecutionError(f"Unsupported statement type: {type(statement)}")
                 
@@ -188,6 +190,20 @@ class ExecutionEngine:
         self.storage.commit()
         
         return deleted_count
+    
+    def _execute_describe(self, stmt: DescribeStatement) -> List[Tuple]:
+        """Execute DESCRIBE statement"""
+        table = self.storage.get_table(stmt.table_name)
+        if not table:
+            raise ExecutionError(f"Table '{stmt.table_name}' does not exist")
+        
+        # Return table schema as list of tuples (column_name, data_type, constraints)
+        results = []
+        for col in table.columns:
+            constraints_str = " ".join(col.constraints) if col.constraints else ""
+            results.append((col.name, col.data_type, constraints_str))
+        
+        return results
     
     def _generate_query_hash(self, sql: str) -> str:
         """Generate hash for query caching"""
