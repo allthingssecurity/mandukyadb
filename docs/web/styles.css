@@ -1,0 +1,49 @@
+:root {
+  --bg: #0b1021;
+  --panel: #0f1730;
+  --border: #263154;
+  --text: #e6e8f2;
+  --muted: #aab1c6;
+  --accent: #8fd5ff;
+  --ok: #6ee7b7;
+  --err: #fda4af;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif;
+}
+
+header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+}
+h1 { margin: 0; font-size: 18px; font-weight: 800; }
+h1 span { color: var(--accent); font-weight: 700; }
+#status { color: var(--muted); font-size: 13px; }
+
+main { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; padding: 16px; }
+
+.term { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+.output {
+  height: 60vh; overflow: auto; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #0d142a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 14px;
+}
+.entry { margin: 0 0 10px; }
+.entry .prompt { color: var(--accent); }
+.entry .error { color: var(--err); }
+.entry .ok { color: var(--ok); }
+
+.input-row { margin-top: 10px; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; }
+textarea { width: 100%; resize: vertical; min-height: 60px; max-height: 50vh; background: #0d142a; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.buttons { display: flex; gap: 8px; }
+button { background: #162046; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+button:hover { background: #1a2652; }
+button:disabled { opacity: 0.6; cursor: default; }
+
+.help { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+.help h2 { margin-top: 0; }
+.help pre { background: #0d142a; padding: 8px; border: 1px solid var(--border); border-radius: 8px; overflow: auto; }
+
