@@ -18,6 +18,7 @@ build/
 dist/
 pip-wheel-metadata/
 *.egg
+node_modules/
 
 # Testing / coverage
 .pytest_cache/
@@ -38,3 +39,6 @@ htmlcov/
 *.sqlite
 *.sqlite3
 *.db-journal
+
+# Remotion output
+remotion/out/
