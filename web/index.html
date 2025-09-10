@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MandukyaDB — WASM Shell</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>MandukyaDB <span>WASM Shell</span></h1>
+      <div id="status">Loading Pyodide…</div>
+    </header>
+    <main>
+      <section class="term">
+        <div id="output" class="output" aria-live="polite"></div>
+        <div class="input-row">
+          <textarea id="input" rows="3" placeholder="Type SQL and hit Shift+Enter to run. End statements with ;"></textarea>
+          <div class="buttons">
+            <button id="run">Run (Shift+Enter)</button>
+            <button id="reset">Reset DB</button>
+            <button id="examples">Load Examples</button>
+          </div>
+        </div>
+      </section>
+      <aside class="help">
+        <h2>Quick Start</h2>
+        <pre><code>CREATE TABLE heroes (id INTEGER, name TEXT, strength INTEGER);
+INSERT INTO heroes VALUES (1, 'Arjuna', 95);
+INSERT INTO heroes VALUES (2, 'Krishna', 98);
+SELECT name FROM heroes WHERE strength &gt; 90;</code></pre>
+        <p>
+          The shell executes using Pyodide (Python in WebAssembly) and the MandukyaDB Python code from this repo.
+        </p>
+      </aside>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
+
