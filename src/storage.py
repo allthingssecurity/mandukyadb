@@ -269,13 +269,15 @@ class StorageEngine:
         return name in self.tables
     
     def _load_database(self):
-        """Load database from disk"""
-        if os.path.exists(self.database_path):
+        """Load database from disk if a valid non-empty file exists."""
+        if os.path.exists(self.database_path) and os.path.getsize(self.database_path) > 0:
             try:
                 with open(self.database_path, 'rb') as f:
                     self.tables = pickle.load(f)
             except Exception as e:
                 raise StorageError(f"Failed to load database: {e}")
+        else:
+            self.tables = {}
     
     def _save_database(self):
         """Save database to disk"""

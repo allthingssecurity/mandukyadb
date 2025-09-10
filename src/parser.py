@@ -81,26 +81,33 @@ class SQLParser:
             raise ParseError(f"Unsupported statement type: {statement_type}")
     
     def _tokenize(self, sql: str) -> List[str]:
-        """Tokenize SQL string"""
-        # Improved tokenizer that handles parentheses better
+        """Tokenize SQL string preserving delimiters used by the parser.
+
+        Splits on whitespace but keeps parentheses and commas as individual tokens.
+        Quotes around string literals are stripped so downstream parsing can
+        treat them as a single token.
+        """
         import re
-        
-        # Split on whitespace but preserve parentheses and commas as separate tokens
+
         pattern = r'(\(|\)|,|;|\s+)'
         parts = re.split(pattern, sql)
-        
-        tokens = []
+
+        tokens: List[str] = []
         for part in parts:
+            if part is None:
+                continue
             part = part.strip()
-            if part and part not in [',', ';']:
-                # Handle quoted strings
-                if part.startswith("'") and part.endswith("'"):
-                    tokens.append(part[1:-1])  # Remove quotes
-                elif part in ['(', ')']:
-                    tokens.append(part)
-                elif part:  # Skip empty strings and whitespace
-                    tokens.append(part)
-        
+            if not part:
+                continue
+            if part == ';':
+                # statement terminator not needed by the AST
+                continue
+            # Handle quoted strings
+            if part.startswith("'") and part.endswith("'") and len(part) >= 2:
+                tokens.append(part[1:-1])
+            else:
+                tokens.append(part)
+
         return tokens
     
     def _parse_create_table(self, tokens: List[str]) -> CreateTableStatement:
@@ -113,43 +120,54 @@ class SQLParser:
         # Find column definitions between parentheses
         # Simplified parser - assumes format: CREATE TABLE name (col1 type1, col2 type2)
         try:
+            # Find parentheses bounds
             paren_start = None
-            for i, token in enumerate(tokens):
-                if '(' in token:
+            paren_end = None
+            for i, tok in enumerate(tokens):
+                if tok == '(' and paren_start is None:
                     paren_start = i
-                    break
-            
-            if paren_start is None:
-                raise ParseError("Missing opening parenthesis in CREATE TABLE")
-            
-            # Extract column definitions
-            column_tokens = tokens[paren_start:]
-            columns = self._parse_column_definitions(column_tokens)
-            
+                if tok == ')':
+                    paren_end = i
+            if paren_start is None or paren_end is None or paren_end <= paren_start:
+                raise ParseError("Missing or invalid parentheses in CREATE TABLE")
+
+            inner = tokens[paren_start + 1:paren_end]
+            columns = self._parse_column_definitions(inner)
+
             return CreateTableStatement(table_name, columns)
-            
+
         except Exception as e:
             raise ParseError(f"Error parsing CREATE TABLE: {e}")
     
     def _parse_column_definitions(self, tokens: List[str]) -> List[Column]:
-        """Parse column definitions from tokens"""
-        columns = []
-        
-        # Simple approach: join tokens and split by comma
-        column_text = ' '.join(tokens)
-        column_text = column_text.strip('()')
-        
-        for col_def in column_text.split(','):
-            col_def = col_def.strip()
-            parts = col_def.split()
-            
-            if len(parts) >= 2:
-                col_name = parts[0]
-                col_type = parts[1].upper()
-                constraints = parts[2:] if len(parts) > 2 else []
-                
-                columns.append(Column(col_name, col_type, constraints))
-        
+        """Parse column definitions from tokens inside parentheses.
+
+        Splits on commas and interprets: name TYPE [constraints...]
+        """
+        columns: List[Column] = []
+        buf: List[str] = []
+
+        def flush():
+            nonlocal buf
+            if not buf:
+                return
+            parts = buf
+            if len(parts) < 2:
+                buf = []
+                return
+            col_name = parts[0]
+            col_type = parts[1].upper()
+            constraints = parts[2:] if len(parts) > 2 else []
+            columns.append(Column(col_name, col_type, constraints))
+            buf = []
+
+        for tok in tokens:
+            if tok == ',':
+                flush()
+            else:
+                buf.append(tok)
+        flush()
+
         return columns
     
     def _parse_insert(self, tokens: List[str]) -> InsertStatement:
@@ -169,20 +187,41 @@ class SQLParser:
         if values_idx is None:
             raise ParseError("Missing VALUES in INSERT statement")
         
-        # Extract values
-        values_tokens = tokens[values_idx + 1:]
-        values_text = ' '.join(values_tokens).strip('()')
-        
-        values = []
-        for value in values_text.split(','):
-            value = value.strip()
-            # Try to convert to appropriate type
-            if value.isdigit():
-                values.append(int(value))
-            elif value.replace('.', '').isdigit():
-                values.append(float(value))
+        # Extract values between parentheses and split by commas
+        tail = tokens[values_idx + 1:]
+        try:
+            l = tail.index('(')
+            r = len(tail) - 1 - tail[::-1].index(')')
+            inner = tail[l + 1:r]
+        except ValueError:
+            inner = tail
+
+        values: List[Any] = []
+        buf: List[str] = []
+
+        def push_value(parts: List[str]):
+            if not parts:
+                return
+            token = ' '.join(parts)
+            if token.isdigit():
+                values.append(int(token))
             else:
-                values.append(value)
+                # float detection
+                try:
+                    if token.count('.') == 1 and all(p.isdigit() for p in token.split('.')):
+                        values.append(float(token))
+                    else:
+                        values.append(token)
+                except Exception:
+                    values.append(token)
+
+        for tok in inner:
+            if tok == ',':
+                push_value(buf)
+                buf = []
+            else:
+                buf.append(tok)
+        push_value(buf)
         
         return InsertStatement(table_name, None, values)
     
@@ -201,12 +240,23 @@ class SQLParser:
         if from_idx is None:
             raise ParseError("Missing FROM in SELECT statement")
         
-        # Extract columns
+        # Extract columns (split by commas)
         column_tokens = tokens[1:from_idx]
         if len(column_tokens) == 1 and column_tokens[0] == '*':
             columns = ['*']
         else:
-            columns = [col.strip() for col in ' '.join(column_tokens).split(',')]
+            cols: List[str] = []
+            buf: List[str] = []
+            for tok in column_tokens:
+                if tok == ',':
+                    if buf:
+                        cols.append(' '.join(buf))
+                        buf = []
+                else:
+                    buf.append(tok)
+            if buf:
+                cols.append(' '.join(buf))
+            columns = [c.strip() for c in cols if c.strip()]
         
         # Extract table name
         table_name = tokens[from_idx + 1]
@@ -219,7 +269,7 @@ class SQLParser:
                 where_idx = i
                 break
         
-        if where_idx and where_idx + 3 < len(tokens):
+        if where_idx is not None and where_idx + 3 < len(tokens):
             # Simple WHERE clause: column = value
             col = tokens[where_idx + 1]
             op = tokens[where_idx + 2]
@@ -250,7 +300,7 @@ class SQLParser:
                 where_idx = i
                 break
         
-        if where_idx and where_idx + 3 < len(tokens):
+        if where_idx is not None and where_idx + 3 < len(tokens):
             col = tokens[where_idx + 1]
             op = tokens[where_idx + 2] 
             val = tokens[where_idx + 3]

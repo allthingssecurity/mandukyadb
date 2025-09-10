@@ -15,6 +15,7 @@ if REPO not in sys.path:
     sys.path.insert(0, REPO)
 
 from src.mandukya_db import MandukyaDB  # type: ignore
+import tempfile
 
 def step(title, sql=None, fn=None):
     started = time.time()
@@ -46,7 +47,11 @@ def infer_kind(sql, fn):
 
 def main():
     steps = []
-    with MandukyaDB(":memory:") as db:
+    # Use a unique temp file to avoid state leakage between runs
+    tmp_db = tempfile.NamedTemporaryFile(prefix="mandukya_examples_", suffix=".db", delete=False)
+    tmp_db_path = tmp_db.name
+    tmp_db.close()
+    with MandukyaDB(tmp_db_path) as db:
         # Create table
         sql1 = "CREATE TABLE heroes (id INTEGER, name TEXT, strength INTEGER);"
         def do1():

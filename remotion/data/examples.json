@@ -5,14 +5,14 @@
       "kind": "create",
       "sql": "CREATE TABLE heroes (id INTEGER, name TEXT, strength INTEGER);",
       "result": "Table 'heroes' created successfully",
-      "elapsed_ms": 0.9169578552246094
+      "elapsed_ms": 0.5428791046142578
     },
     {
       "title": "Insert rows",
       "kind": "insert",
       "sql": "INSERT INTO heroes VALUES (1, 'Arjuna', 95);\n        INSERT INTO heroes VALUES (2, 'Krishna', 98);\n        INSERT INTO heroes VALUES (3, 'Bhima', 87);",
       "result": "Inserted 3 rows",
-      "elapsed_ms": 8.812904357910156
+      "elapsed_ms": 7.258892059326172
     },
     {
       "title": "Select all",
@@ -20,30 +20,43 @@
       "sql": "SELECT * FROM heroes;",
       "result": [
         [
-          "1 Arjuna 95"
+          1,
+          "Arjuna",
+          95
         ],
         [
-          "2 Krishna 98"
+          2,
+          "Krishna",
+          98
         ],
         [
-          "3 Bhima 87"
+          3,
+          "Bhima",
+          87
         ]
       ],
-      "elapsed_ms": 0.28204917907714844
+      "elapsed_ms": 0.07510185241699219
     },
     {
       "title": "Filter strong heroes",
       "kind": "select",
       "sql": "SELECT name FROM heroes WHERE strength > 90;",
-      "result": [],
-      "elapsed_ms": 0.05412101745605469
+      "result": [
+        [
+          "Arjuna"
+        ],
+        [
+          "Krishna"
+        ]
+      ],
+      "elapsed_ms": 0.025033950805664062
     },
     {
       "title": "Delete one",
       "kind": "delete",
       "sql": "DELETE FROM heroes WHERE id = 1;",
-      "result": "Deleted 0 row",
-      "elapsed_ms": 2.3407936096191406
+      "result": "Deleted 1 row",
+      "elapsed_ms": 5.496978759765625
     },
     {
       "title": "Stats",
