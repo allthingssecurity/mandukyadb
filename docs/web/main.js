@@ -97,26 +97,17 @@ async function runInput() {
   const statements = text.split(';').map(s => s.trim()).filter(Boolean).map(s => s + ';');
   for (const sql of statements) {
     try {
-      const py = `\nimport json\nres = run_sql(${JSON.stringify(sql)})\n` +
-                 `def to_json_val(x):\n` +
-                 `  try:\n` +
-                 `    return json.dumps(x)\n` +
-                 `  except TypeError:\n` +
-                 `    if isinstance(x, list):\n` +
-                 `      y = []\n` +
-                 `      for t in x:\n` +
-                 `        if isinstance(t, tuple):\n` +
-                 `          y.append(list(t))\n` +
-                 `        else:\n` +
-                 `          y.append(t)\n` +
-                 `      return json.dumps(y)\n` +
-                 `    return json.dumps(str(x))\n` +
-                 `to_json_val(res)`;
+      const py = `\nimport json\ntry:\n    res = run_sql(${JSON.stringify(sql)})\n    def to_json_val(x):\n        try:\n            return json.dumps(x)\n        except TypeError:\n            if isinstance(x, list):\n                y = []\n                for t in x:\n                    if isinstance(t, tuple):\n                        y.append(list(t))\n                    else:\n                        y.append(t)\n                return json.dumps(y)\n            return json.dumps(str(x))\n    print(json.dumps({"ok": True, "result": json.loads(to_json_val(res))}))\nexcept Exception as e:\n    print(json.dumps({"ok": False, "error": str(e)}))`;
       const jsonStr = await pyodide.runPythonAsync(py);
-      const val = JSON.parse(jsonStr);
-      appendResult(stringifyResult(val));
+      const payload = JSON.parse(jsonStr);
+      if (payload.ok) {
+        appendResult(stringifyResult(payload.result));
+      } else {
+        append('error', payload.error || 'Error');
+      }
     } catch (e) {
-      append('error', String(e));
+      const msg = String(e).split('\n').slice(-1)[0];
+      append('error', msg || String(e));
     }
   }
 }
@@ -133,4 +124,3 @@ inputEl.addEventListener('keydown', (e) => {
 });
 
 loadPyodideAndDB().catch((e) => { statusEl.textContent = 'Failed to initialize'; append('error', String(e)); });
-
