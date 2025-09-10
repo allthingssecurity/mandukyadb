@@ -97,7 +97,7 @@ async function runInput() {
   const statements = text.split(';').map(s => s.trim()).filter(Boolean).map(s => s + ';');
   for (const sql of statements) {
     try {
-      const py = `\nimport json\ntry:\n    res = run_sql(${JSON.stringify(sql)})\n    def to_json_val(x):\n        try:\n            return json.dumps(x)\n        except TypeError:\n            if isinstance(x, list):\n                y = []\n                for t in x:\n                    if isinstance(t, tuple):\n                        y.append(list(t))\n                    else:\n                        y.append(t)\n                return json.dumps(y)\n            return json.dumps(str(x))\n    print(json.dumps({"ok": True, "result": json.loads(to_json_val(res))}))\nexcept Exception as e:\n    print(json.dumps({"ok": False, "error": str(e)}))`;
+      const py = `\nimport json\ntry:\n    res = run_sql(${JSON.stringify(sql)})\n    def to_json_val(x):\n        try:\n            return json.dumps(x)\n        except TypeError:\n            if isinstance(x, list):\n                y = []\n                for t in x:\n                    if isinstance(t, tuple):\n                        y.append(list(t))\n                    else:\n                        y.append(t)\n                return json.dumps(y)\n            return json.dumps(str(x))\n    _payload = {"ok": True, "result": json.loads(to_json_val(res))}\nexcept Exception as e:\n    _payload = {"ok": False, "error": str(e)}\njson.dumps(_payload)`;
       const jsonStr = await pyodide.runPythonAsync(py);
       const payload = JSON.parse(jsonStr);
       if (payload.ok) {
