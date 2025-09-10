@@ -33,3 +33,8 @@ htmlcov/
 # OS
 .DS_Store
 
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
